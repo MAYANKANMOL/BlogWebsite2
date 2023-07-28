@@ -1,0 +1,23 @@
+<div><a href="/admin"><h4>Admin Sign in</h4></a></div>
+<div class="author">
+    <h1 class="author__heading">Hi, I am Mayank Raj.</h1>
+    <p class="author__body">Web developer and Bloger.</p>
+</div>
+  
+<img src="/img/hero-image.jpg" class="hero-image" width="981" height="528">
+  
+<section class="articles">
+    <h2 class="articles__heading">Latest Posts</h2>
+
+    <ul class="article-ul">
+      <% data.forEach(function(post){ %>
+        <li>
+          <a href="/post/<%= post._id %>">
+            <span><%= post.title %></span>
+            <span class="article-list__date"> <%= post.createdAt.toDateString() %> </span>
+          </a>
+        </li>
+      <% }); %>
+    </ul>
+
+</section>
