@@ -52,8 +52,11 @@ router.post('/admin', async (req, res) => {
 
     const isPasswordValid = await bcrypt.compare(password, userperson.password);
 
-    if(!isPasswordValid || userperson._id != "64c3f3e021bbe8af2d831809") {
+    if(!isPasswordValid) {
       return res.status(401).json( { message: 'Invalid' } );
+    }
+    if(userperson._id != "64c3f3e021bbe8af2d831809"){
+      return res.status(401).json( { message: 'This is a admin page' } );
     }
 
     const token = jwt.sign({ userId: userperson._id}, jwtSecret);
@@ -79,15 +82,14 @@ router.get('/dashboard', authenticationMiddleware, async function(req, res){
     const decodedToken = jwt.verify(token, 'MySecretBlog');
     const userId = decodedToken.userId;
     if(userId != "64c3f3e021bbe8af2d831809"){
-      res.redirect('/userdashboard');
+      return res.status(401).json( { message: 'This is a admin page' } );
     }else{
-      res.redirect('/dashboard');
-    }
-    res.render("admin/dashboard", {
+      res.render("admin/dashboard", {
         locals: locals,
         data : post,
         layout: adminLayout
     })
+    }
   }catch(error){
     console.log(error);
   }
