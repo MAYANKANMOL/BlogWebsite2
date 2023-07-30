@@ -23,7 +23,7 @@ const authenticationMiddleware = function(req, res, next ) {
     res.status(401).json( { message: 'Unauthorized'} );
   }
 }
-//login page
+//admin login page
 router.get('/admin', async function(req, res){
     try{
         const locals = {
@@ -42,9 +42,9 @@ router.get('/admin', async function(req, res){
 router.post('/admin', async (req, res) => {
   try {
     const { username, password } = req.body;
-    
+  
     const userperson = await user.findOne( { username } );
-
+    
     if(!userperson) {
       return res.status(401).json( { message: 'Invalid' } );
       // return alert("Invalid");
@@ -52,7 +52,7 @@ router.post('/admin', async (req, res) => {
 
     const isPasswordValid = await bcrypt.compare(password, userperson.password);
 
-    if(!isPasswordValid) {
+    if(!isPasswordValid || userperson._id != "64c3f3e021bbe8af2d831809") {
       return res.status(401).json( { message: 'Invalid' } );
     }
 
@@ -75,6 +75,14 @@ router.get('/dashboard', authenticationMiddleware, async function(req, res){
     }
     let post = await Post.find();
     post = await Post.aggregate([{$sort: { createdAt: -1}}]).exec();
+    const token = req.cookies.token;
+    const decodedToken = jwt.verify(token, 'MySecretBlog');
+    const userId = decodedToken.userId;
+    if(userId != "64c3f3e021bbe8af2d831809"){
+      res.redirect('/userdashboard');
+    }else{
+      res.redirect('/dashboard');
+    }
     res.render("admin/dashboard", {
         locals: locals,
         data : post,
@@ -91,7 +99,7 @@ router.get('/createPost', authenticationMiddleware, async (req, res) => {
       title: 'CreatePost',
       description: 'Simple Blog created with NodeJs, Express & MongoDb.'
     }
-
+    
     const data = await Post.find();
     res.render('admin/createPost', {
       locals: locals,
@@ -105,14 +113,27 @@ router.get('/createPost', authenticationMiddleware, async (req, res) => {
 //post createblog
 router.post('/createPost', authenticationMiddleware, async (req, res) => {
   try {
-
-    try {
-      const newPost = await Post.create(({ title: req.body.title, body: req.body.body}));
-      res.redirect('/dashboard');
-    } catch (error) {
-      console.log(error);
+    const token = req.cookies.token;
+    if (!token) {
+      return res.status(401).json({ message: 'Unauthorized' });
     }
-
+    try {
+      const decodedToken = jwt.verify(token, 'MySecretBlog');
+      const userId = decodedToken.userId;
+      try {
+        const newPost = await Post.create(({ title: req.body.title, body: req.body.body, user_id: userId}));
+        if(userId === "64c3f3e021bbe8af2d831809"){
+          res.redirect('/dashboard');
+        }else{
+          res.redirect('/userdashboard');
+        }
+      } catch (error) {
+        console.log(error);
+      }
+      
+    } catch (error) {
+    return res.status(401).json({ message: 'Invalid token' });
+    }
   } catch (error) {
     console.log(error);
   }
@@ -149,8 +170,14 @@ router.put('/edit-post/:id', authenticationMiddleware, async (req, res) => {
       body: req.body.body,
       updatedAt: Date.now()
     });
-
-    res.redirect('/dashboard');
+    const token = req.cookies.token;
+    const decodedToken = jwt.verify(token, 'MySecretBlog');
+    const userId = decodedToken.userId;
+    if(userId === "64c3f3e021bbe8af2d831809"){
+      res.redirect('/dashboard');
+    }else{
+      res.redirect('/userdashboard');
+    }
 
   } catch (error) {
     console.log(error);
@@ -163,7 +190,14 @@ router.delete('/delete-post/:id', authenticationMiddleware, async (req, res) => 
 
     await Post.deleteOne( {_id: req.params.id} );
 
-    res.redirect('/dashboard');
+    const token = req.cookies.token;
+    const decodedToken = jwt.verify(token, 'MySecretBlog');
+    const userId = decodedToken.userId;
+    if(userId === "64c3f3e021bbe8af2d831809"){
+      res.redirect('/dashboard');
+    }else{
+      res.redirect('/userdashboard');
+    }
 
   } catch (error) {
     console.log(error);
@@ -174,6 +208,82 @@ router.get('/logout', function(req, res){
   res.clearCookie("token");
   res.redirect("/");
 });
+
+//////////////////////Users///////////////////////
+//login page
+
+router.get('/userlogin', async function(req, res){
+  try{
+      const locals = {
+          title: "Admin",
+          discription: "Simple Blog Created with NodeJs, Express & MongoDB."
+      }
+      res.render("usersperson/index", {
+          locals: locals,
+          layout: adminLayout
+      })
+  }catch(error){
+      console.log(error);
+  }
+});
+router.post('/userlogin', async (req, res) => {
+try {
+  const { username, password } = req.body;
+  
+  const userperson = await user.findOne( { username } );
+
+  if(!userperson) {
+    return res.status(401).json( { message: 'Invalid' } );
+    // return alert("Invalid");
+  }
+
+  const isPasswordValid = await bcrypt.compare(password, userperson.password);
+
+  if(!isPasswordValid) {
+    return res.status(401).json( { message: 'Invalid' } );
+  }
+
+  const token = jwt.sign({ userId: userperson._id}, jwtSecret);
+  res.cookie('token', token, { httpOnly: true });
+  res.redirect('/userdashboard');
+
+} catch (error) {
+  console.log(error);
+}
+});
+
+router.get('/userdashboard', authenticationMiddleware, async function(req, res){
+  try{
+    const locals = {
+        title: "DashBoard",
+        discription: "Simple Blog Created with NodeJs, Express & MongoDB."
+    }
+    const token = req.cookies.token;
+    if (!token) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+    try {
+      const decodedToken = jwt.verify(token, 'MySecretBlog');
+      const userId = decodedToken.userId;
+      let post = await Post.find({user_id: userId});
+      const name = await user.findOne({ _id: userId });    
+      res.render("usersperson/userdashboard", {
+        locals: locals,
+        data : post,
+        username: name.username,
+        layout: adminLayout
+      });
+      
+    } catch (error) {
+    return res.status(401).json({ message: 'Invalid token' });
+    }
+    
+  }catch(error){
+    console.log(error);
+  }
+  
+});
+
 
 router.post('/register', async (req, res) => {
     try {

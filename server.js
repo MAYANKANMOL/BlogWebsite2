@@ -9,7 +9,6 @@ const MongoStore = require("connect-mongo");
 const session = require('express-session');
 const  connectDB = require("./server/config/db");
 // const mongoose = require("mongoose");
-
 const app = express();
 
 app.use(express.urlencoded({ extended: true }));

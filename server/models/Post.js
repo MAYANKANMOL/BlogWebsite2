@@ -9,6 +9,10 @@ const PostSchema = new mongoose.Schema({
         type: String,
         required: true
     },
+    user_id: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+    },
     createdAt: {
         type: Date,
         default: Date.now
@@ -16,6 +20,6 @@ const PostSchema = new mongoose.Schema({
     updatedAt: {
         type: Date,
         default: Date.now
-    }
+    } 
 });
 module.exports = mongoose.model('Post', PostSchema);

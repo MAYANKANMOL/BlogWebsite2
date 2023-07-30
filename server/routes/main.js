@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const Post = require('../models/Post');
+const User = require('../models/User');
 const mainLayout = "../views/layouts/main";
 
 //routes
@@ -27,13 +28,18 @@ router.get('/post/:id', async function(req, res){
     try{
         let ide = req.params.id;
         const data = await Post.findById({_id: ide});
+        const userid = data.user_id;
+        const usertemp = await User.findById({_id: userid});
+        const name = usertemp.username;
+        console.log(name);
         const locals = {
             title: data.title,
             discription: "Simple Blog Created with NodeJs, Express & MongoDB."
         }
         res.render("post", {
             locals: locals,
-            data: data
+            data: data,
+            name: name
         })
     }catch(error){
         console.log(error);
